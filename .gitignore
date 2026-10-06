@@ -1,0 +1,6 @@
+build/
+.qa/
+data/
+
+tickets.txt
+tickets.txt.tmp
