@@ -4,7 +4,7 @@ Minimal shared foundation for Anton Opria and Dzheffrei Ihesonulo.
 **C11 + Raylib 5.5, Linux.** This currently opens an empty window with a ticket
 counter. Ticket creation, search, editing and persistence are not implemented.
 
-Read [the shared contract](docs/CONTRACT.md), `src/app.h` and `AGENTS.md`
+Read `src/app.h` and `AGENTS.md`
 before asking an AI to implement a feature. The common function names and data
 structures must remain compatible across both personal branches.
 
