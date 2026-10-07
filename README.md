@@ -48,7 +48,9 @@ Enter a customer, subject and description, then click Create ticket or press
 Enter. Use Tab to move between fields. Select a ticket in the list and click
 Open, In progress or Resolved to change its status. Scroll over the list to
 see more tickets. The initial form supports printable English ASCII input.
-Long descriptions are clipped in the preview. Tickets exist only for the
+The selected ticket card shows ID, customer, subject, description, status,
+priority and assignee (Unassigned if empty). Long text wraps; scroll inside
+the card to read all details. Changing selection resets the card scroll. Tickets exist only for the
 current session and are lost when the program closes.
 
 ## Test creation and status changes
