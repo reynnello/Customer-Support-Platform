@@ -48,7 +48,8 @@ void app_init(AppState *app);
 const char *ticket_status_name(TicketStatus status);
 const char *ticket_priority_name(TicketPriority priority);
 
-/* Planned contracts below. Functions are NOT implemented yet.
+/* Function contracts below. Anton implements creation and status changes.
+   Query, priority/assignee editing and storage remain unimplemented.
    Mutations return false and set app->error on failure, leaving ticket data
    unchanged. Success clears error and sets dirty for data changes.
    All pointers must be non-NULL unless explicitly documented otherwise. */
