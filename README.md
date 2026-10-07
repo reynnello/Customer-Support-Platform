@@ -59,3 +59,7 @@ current session and are lost when the program closes.
 cc -std=c11 -Wall -Wextra -Wpedantic -Isrc tests/test_ticket_create.c src/app.c src/ticket_create.c -o build/test_ticket_create
 ./build/test_ticket_create
 ```
+
+The ticket summary displays Total tickets, Open, In progress and Resolved.
+Counts refresh immediately after creation or a status change and include all
+tickets, including those outside the visible list.

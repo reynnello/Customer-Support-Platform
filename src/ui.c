@@ -170,6 +170,27 @@ void ui_draw(const AppState *app)
         DrawText("Scroll inside the card for full details", 448, 732, 14, GRAY);
     for (int status = 0; status < 3; ++status)
         box((Rectangle){448 + status * 164.0f, 750, 152, 38}, ticket_status_name((TicketStatus)status), selected && selected->status == (TicketStatus)status);
+    /* Derive counts from current tickets each frame, so edits cannot leave
+       stale totals and no additional shared state is needed. */
+    int counts[4] = {(int)app->count, 0, 0, 0};
+    for (size_t i = 0; i < app->count; ++i) {
+        switch (app->tickets[i].status) {
+            case TICKET_OPEN: ++counts[1]; break;
+            case TICKET_IN_PROGRESS: ++counts[2]; break;
+            case TICKET_RESOLVED: ++counts[3]; break;
+        }
+    }
+    const char *count_labels[] = {"Total tickets", "Open", "In progress", "Resolved"};
+    const Color count_colors[] = {DARKBLUE, BLUE, ORANGE, DARKGREEN};
+    DrawText("Ticket summary", 32, 554, 22, DARKBLUE);
+    for (int i = 0; i < 4; ++i) {
+        int x = 32 + (i % 2) * 196;
+        int y = 586 + (i / 2) * 102;
+        DrawRectangle(x, y, 184, 88, WHITE);
+        DrawRectangleLines(x, y, 184, 88, LIGHTGRAY);
+        DrawText(count_labels[i], x + 12, y + 12, 18, DARKGRAY);
+        DrawText(TextFormat("%d", counts[i]), x + 12, y + 40, 30, count_colors[i]);
+    }
     DrawText(app->error, 32, 512, 18, MAROON);
     DrawText(TextFormat("Tickets: %d / %d | Session only - saving is not implemented", (int)app->count, MAX_TICKETS),
              32, 817, 18, DARKGRAY);
