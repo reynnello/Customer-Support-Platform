@@ -63,3 +63,8 @@ cc -std=c11 -Wall -Wextra -Wpedantic -Isrc tests/test_ticket_create.c src/app.c 
 The ticket summary displays Total tickets, Open, In progress and Resolved.
 Counts refresh immediately after creation or a status change and include all
 tickets, including those outside the visible list.
+
+Status colors are consistent across the card, list, buttons and counters:
+Open is blue, In progress is dark orange, and Resolved is green. The active
+status button has a tinted background and thick border. Controls are disabled
+until a ticket is selected.

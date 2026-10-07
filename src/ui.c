@@ -18,9 +18,19 @@ static const Ticket *selected_ticket(const AppState *app)
     return NULL;
 }
 
+static Color status_color(TicketStatus status)
+{
+    switch (status) {
+        case TICKET_OPEN: return BLUE;
+        case TICKET_IN_PROGRESS: return (Color){172, 88, 0, 255};
+        case TICKET_RESOLVED: return DARKGREEN;
+        default: return DARKGRAY;
+    }
+}
+
 /* Wrap at spaces when possible; split long words so every byte is visible.
    The current form accepts ASCII. The same layout measures and draws. */
-static int detail_line(const char *text, int y, bool draw)
+static int detail_line(const char *text, int y, bool draw, Color color)
 {
     while (*text) {
         char line[DESCRIPTION_CAP + 80];
@@ -38,7 +48,7 @@ static int detail_line(const char *text, int y, bool draw)
             consumed = space + 1;
         }
         line[n] = '\0';
-        if (draw) DrawText(line, 460, y, 18, DARKGRAY);
+        if (draw) DrawText(line, 460, y, 18, color);
         y += 24;
         text += consumed;
         if (*text == '\n') ++text;
@@ -48,13 +58,13 @@ static int detail_line(const char *text, int y, bool draw)
 
 static int detail_content(const Ticket *ticket, int y, bool draw)
 {
-    y = detail_line(TextFormat("ID: #%d", ticket->id), y, draw);
-    y = detail_line(TextFormat("Customer: %s", ticket->customer), y, draw);
-    y = detail_line(TextFormat("Subject: %s", ticket->subject), y, draw);
-    y = detail_line(TextFormat("Status: %s", ticket_status_name(ticket->status)), y, draw);
-    y = detail_line(TextFormat("Priority: %s", ticket_priority_name(ticket->priority)), y, draw);
-    y = detail_line(TextFormat("Assigned to: %s", ticket->assignee[0] ? ticket->assignee : "Unassigned"), y, draw);
-    return detail_line(TextFormat("Description: %s", ticket->description), y, draw);
+    y = detail_line(TextFormat("ID: #%d", ticket->id), y, draw, DARKGRAY);
+    y = detail_line(TextFormat("Customer: %s", ticket->customer), y, draw, DARKGRAY);
+    y = detail_line(TextFormat("Subject: %s", ticket->subject), y, draw, DARKGRAY);
+    y = detail_line(TextFormat("Status: %s", ticket_status_name(ticket->status)), y, draw, status_color(ticket->status));
+    y = detail_line(TextFormat("Priority: %s", ticket_priority_name(ticket->priority)), y, draw, DARKGRAY);
+    y = detail_line(TextFormat("Assigned to: %s", ticket->assignee[0] ? ticket->assignee : "Unassigned"), y, draw, DARKGRAY);
+    return detail_line(TextFormat("Description: %s", ticket->description), y, draw, DARKGRAY);
 }
 static const Rectangle fields[] = {{32, 133, 380, 38}, {32, 207, 380, 38}, {32, 281, 380, 38}};
 static const Rectangle create_button = {32, 342, 380, 42};
@@ -154,7 +164,7 @@ void ui_draw(const AppState *app)
         Rectangle area = {448, (float)(122 + row * 43), 480, 39};
         box(area, "", app->selected_id == ticket->id);
         clipped_text(TextFormat("#%d  %s", ticket->id, ticket->subject), 458, (int)area.y + 10, 300);
-        DrawText(ticket_status_name(ticket->status), 770, (int)area.y + 11, 16, DARKBLUE);
+        DrawText(ticket_status_name(ticket->status), 770, (int)area.y + 11, 16, status_color(ticket->status));
     }
     const Ticket *selected = selected_ticket(app);
     DrawText("Selected ticket", 448, 389, 20, DARKBLUE);
@@ -168,8 +178,15 @@ void ui_draw(const AppState *app)
     EndScissorMode();
     if (selected && detail_content(selected, 0, false) > (int)detail_area.height - 24)
         DrawText("Scroll inside the card for full details", 448, 732, 14, GRAY);
-    for (int status = 0; status < 3; ++status)
-        box((Rectangle){448 + status * 164.0f, 750, 152, 38}, ticket_status_name((TicketStatus)status), selected && selected->status == (TicketStatus)status);
+    for (int status = 0; status < 3; ++status) {
+        Rectangle button = {448 + status * 164.0f, 750, 152, 38};
+        bool active = selected && selected->status == (TicketStatus)status;
+        Color color = selected ? status_color((TicketStatus)status) : GRAY;
+        DrawRectangleRec(button, active ? Fade(color, 0.18f) : LIGHTGRAY);
+        DrawRectangleLinesEx(button, active ? 3 : 1, color);
+        DrawText(ticket_status_name((TicketStatus)status), (int)button.x + 10,
+                 (int)button.y + 11, 18, color);
+    }
     /* Derive counts from current tickets each frame, so edits cannot leave
        stale totals and no additional shared state is needed. */
     int counts[4] = {(int)app->count, 0, 0, 0};
@@ -181,7 +198,7 @@ void ui_draw(const AppState *app)
         }
     }
     const char *count_labels[] = {"Total tickets", "Open", "In progress", "Resolved"};
-    const Color count_colors[] = {DARKBLUE, BLUE, ORANGE, DARKGREEN};
+    const Color count_colors[] = {DARKBLUE, status_color(TICKET_OPEN), status_color(TICKET_IN_PROGRESS), status_color(TICKET_RESOLVED)};
     DrawText("Ticket summary", 32, 554, 22, DARKBLUE);
     for (int i = 0; i < 4; ++i) {
         int x = 32 + (i % 2) * 196;
