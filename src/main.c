@@ -6,7 +6,7 @@ int main(void)
 {
     AppState app;
     app_init(&app);
-    InitWindow(960, 600, "Customer Support Platform");
+    InitWindow(960, 860, "Customer Support Platform");
     SetTargetFPS(60);
     while (!WindowShouldClose()) {
         ui_update(&app);

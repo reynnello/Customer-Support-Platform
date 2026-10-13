@@ -7,8 +7,68 @@ static char subject[SUBJECT_CAP];
 static char description[DESCRIPTION_CAP];
 static int active_field;
 static int first_row;
+static int detail_scroll;
+static int detail_id;
+static const Rectangle detail_area = {448, 414, 480, 316};
+
+static const Ticket *selected_ticket(const AppState *app)
+{
+    for (size_t i = 0; i < app->count; ++i)
+        if (app->tickets[i].id == app->selected_id) return &app->tickets[i];
+    return NULL;
+}
+
+static Color status_color(TicketStatus status)
+{
+    switch (status) {
+        case TICKET_OPEN: return BLUE;
+        case TICKET_IN_PROGRESS: return (Color){172, 88, 0, 255};
+        case TICKET_RESOLVED: return DARKGREEN;
+        default: return DARKGRAY;
+    }
+}
+
+/* Wrap at spaces when possible; split long words so every byte is visible.
+   The current form accepts ASCII. The same layout measures and draws. */
+static int detail_line(const char *text, int y, bool draw, Color color)
+{
+    while (*text) {
+        char line[DESCRIPTION_CAP + 80];
+        size_t n = 0, space = 0;
+        while (text[n] && text[n] != '\n' && n < sizeof line - 1) {
+            line[n] = text[n];
+            line[n + 1] = '\0';
+            if (MeasureText(line, 18) > 448 && n > 0) break;
+            if (text[n] == ' ') space = n;
+            ++n;
+        }
+        size_t consumed = n;
+        if (text[n] && text[n] != '\n' && space > 0) {
+            n = space;
+            consumed = space + 1;
+        }
+        line[n] = '\0';
+        if (draw) DrawText(line, 460, y, 18, color);
+        y += 24;
+        text += consumed;
+        if (*text == '\n') ++text;
+    }
+    return y + 8;
+}
+
+static int detail_content(const Ticket *ticket, int y, bool draw)
+{
+    y = detail_line(TextFormat("ID: #%d", ticket->id), y, draw, DARKGRAY);
+    y = detail_line(TextFormat("Customer: %s", ticket->customer), y, draw, DARKGRAY);
+    y = detail_line(TextFormat("Subject: %s", ticket->subject), y, draw, DARKGRAY);
+    y = detail_line(TextFormat("Status: %s", ticket_status_name(ticket->status)), y, draw, status_color(ticket->status));
+    y = detail_line(TextFormat("Priority: %s", ticket_priority_name(ticket->priority)), y, draw, DARKGRAY);
+    y = detail_line(TextFormat("Assigned to: %s", ticket->assignee[0] ? ticket->assignee : "Unassigned"), y, draw, DARKGRAY);
+    return detail_line(TextFormat("Description: %s", ticket->description), y, draw, DARKGRAY);
+}
 static const Rectangle fields[] = {{32, 133, 380, 38}, {32, 207, 380, 38}, {32, 281, 380, 38}};
-static const Rectangle create_button = {32, 342, 380, 42};
+static const Rectangle create_button = {32, 342, 234, 42};
+static const Rectangle clear_button = {278, 342, 134, 42};
 
 static bool clicked(Rectangle box)
 {
@@ -47,7 +107,11 @@ void ui_update(AppState *app)
             text[len] = '\0';
         }
     }
-    if (clicked(create_button) || IsKeyPressed(KEY_ENTER)) {
+    if (clicked(clear_button)) {
+        customer[0] = subject[0] = description[0] = '\0';
+        active_field = 0;
+        app->error[0] = '\0';
+    } else if (clicked(create_button) || IsKeyPressed(KEY_ENTER)) {
         if (ticket_create(app, customer, subject, description)) {
             customer[0] = subject[0] = description[0] = '\0';
             active_field = 0;
@@ -63,8 +127,19 @@ void ui_update(AppState *app)
         if (clicked((Rectangle){448, (float)(122 + row * 43), 480, 39}))
             app->selected_id = app->tickets[first_row + row].id;
     }
+    if (detail_id != app->selected_id) {
+        detail_id = app->selected_id;
+        detail_scroll = 0;
+    }
+    const Ticket *selected = selected_ticket(app);
+    int max_scroll = selected ? detail_content(selected, 0, false) - ((int)detail_area.height - 24) : 0;
+    if (max_scroll < 0) max_scroll = 0;
+    if (CheckCollisionPointRec(GetMousePosition(), detail_area))
+        detail_scroll -= (int)(GetMouseWheelMove() * 32);
+    if (detail_scroll < 0) detail_scroll = 0;
+    if (detail_scroll > max_scroll) detail_scroll = max_scroll;
     for (int status = 0; status < 3; ++status) {
-        if (clicked((Rectangle){448 + status * 164.0f, 458, 152, 38}))
+        if (selected && clicked((Rectangle){448 + status * 164.0f, 750, 152, 38}))
             ticket_set_status(app, app->selected_id, (TicketStatus)status);
     }
 }
@@ -85,7 +160,8 @@ void ui_draw(const AppState *app)
         while (*visible && MeasureText(visible, 18) > 358) ++visible;
         clipped_text(visible, 42, (int)fields[i].y + 10, 358);
     }
-    box(create_button, "Create ticket  [Enter]", false);
+    box(create_button, "Create ticket", false);
+    box(clear_button, "Clear form", false);
     DrawText("Tab: next field. English text input.", 32, 402, 17, GRAY);
     DrawText("Scroll over the list to view more tickets.", 448, 97, 16, GRAY);
     if (!app->count) DrawText("No tickets yet. Create your first ticket.", 448, 140, 18, GRAY);
@@ -94,16 +170,51 @@ void ui_draw(const AppState *app)
         Rectangle area = {448, (float)(122 + row * 43), 480, 39};
         box(area, "", app->selected_id == ticket->id);
         clipped_text(TextFormat("#%d  %s", ticket->id, ticket->subject), 458, (int)area.y + 10, 300);
-        DrawText(ticket_status_name(ticket->status), 770, (int)area.y + 11, 16, DARKBLUE);
+        DrawText(ticket_status_name(ticket->status), 770, (int)area.y + 11, 16, status_color(ticket->status));
     }
+    const Ticket *selected = selected_ticket(app);
+    DrawText("Selected ticket", 448, 389, 20, DARKBLUE);
+    DrawRectangleRec(detail_area, WHITE);
+    DrawRectangleLinesEx(detail_area, 1, LIGHTGRAY);
+    BeginScissorMode(449, 415, 478, 314);
+    if (selected)
+        detail_content(selected, 426 - detail_scroll, true);
+    else
+        DrawText("Select a ticket to view its details.", 460, 430, 18, GRAY);
+    EndScissorMode();
+    if (selected && detail_content(selected, 0, false) > (int)detail_area.height - 24)
+        DrawText("Scroll inside the card for full details", 448, 732, 14, GRAY);
+    for (int status = 0; status < 3; ++status) {
+        Rectangle button = {448 + status * 164.0f, 750, 152, 38};
+        bool active = selected && selected->status == (TicketStatus)status;
+        Color color = selected ? status_color((TicketStatus)status) : GRAY;
+        DrawRectangleRec(button, active ? Fade(color, 0.18f) : LIGHTGRAY);
+        DrawRectangleLinesEx(button, active ? 3 : 1, color);
+        DrawText(ticket_status_name((TicketStatus)status), (int)button.x + 10,
+                 (int)button.y + 11, 18, color);
+    }
+    /* Derive counts from current tickets each frame, so edits cannot leave
+       stale totals and no additional shared state is needed. */
+    int counts[4] = {(int)app->count, 0, 0, 0};
     for (size_t i = 0; i < app->count; ++i) {
-        if (app->tickets[i].id != app->selected_id) continue;
-        clipped_text(TextFormat("Customer: %s", app->tickets[i].customer), 448, 397, 480);
-        clipped_text(app->tickets[i].description, 448, 426, 480);
+        switch (app->tickets[i].status) {
+            case TICKET_OPEN: ++counts[1]; break;
+            case TICKET_IN_PROGRESS: ++counts[2]; break;
+            case TICKET_RESOLVED: ++counts[3]; break;
+        }
     }
-    for (int status = 0; status < 3; ++status)
-        box((Rectangle){448 + status * 164.0f, 458, 152, 38}, ticket_status_name((TicketStatus)status), false);
+    const char *count_labels[] = {"Total tickets", "Open", "In progress", "Resolved"};
+    const Color count_colors[] = {DARKBLUE, status_color(TICKET_OPEN), status_color(TICKET_IN_PROGRESS), status_color(TICKET_RESOLVED)};
+    DrawText("Ticket summary", 32, 554, 22, DARKBLUE);
+    for (int i = 0; i < 4; ++i) {
+        int x = 32 + (i % 2) * 196;
+        int y = 586 + (i / 2) * 102;
+        DrawRectangle(x, y, 184, 88, WHITE);
+        DrawRectangleLines(x, y, 184, 88, LIGHTGRAY);
+        DrawText(count_labels[i], x + 12, y + 12, 18, DARKGRAY);
+        DrawText(TextFormat("%d", counts[i]), x + 12, y + 40, 30, count_colors[i]);
+    }
     DrawText(app->error, 32, 512, 18, MAROON);
     DrawText(TextFormat("Tickets: %d / %d | Session only - saving is not implemented", (int)app->count, MAX_TICKETS),
-             32, 550, 18, DARKGRAY);
+             32, 817, 18, DARKGRAY);
 }
