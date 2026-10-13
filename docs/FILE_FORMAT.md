@@ -88,6 +88,6 @@ The load fails (returns `false`, sets `app->error`, current data unchanged) when
 
 A `\r` directly before `\n` (Windows line endings) is accepted and ignored.
 
-Error messages include the line number, for example `tickets.txt line 4: unknown priority "URGENT".`
+Error messages include the line number, for example `Load failed: tickets.txt line 4: unknown priority "URGENT".`
 
 On success: tickets are replaced, `selected_id = 0`, `dirty = false`, `error` cleared, `next_id = max ID + 1`.
