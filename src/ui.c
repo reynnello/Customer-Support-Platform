@@ -67,7 +67,8 @@ static int detail_content(const Ticket *ticket, int y, bool draw)
     return detail_line(TextFormat("Description: %s", ticket->description), y, draw, DARKGRAY);
 }
 static const Rectangle fields[] = {{32, 133, 380, 38}, {32, 207, 380, 38}, {32, 281, 380, 38}};
-static const Rectangle create_button = {32, 342, 380, 42};
+static const Rectangle create_button = {32, 342, 234, 42};
+static const Rectangle clear_button = {278, 342, 134, 42};
 
 static bool clicked(Rectangle box)
 {
@@ -106,7 +107,11 @@ void ui_update(AppState *app)
             text[len] = '\0';
         }
     }
-    if (clicked(create_button) || IsKeyPressed(KEY_ENTER)) {
+    if (clicked(clear_button)) {
+        customer[0] = subject[0] = description[0] = '\0';
+        active_field = 0;
+        app->error[0] = '\0';
+    } else if (clicked(create_button) || IsKeyPressed(KEY_ENTER)) {
         if (ticket_create(app, customer, subject, description)) {
             customer[0] = subject[0] = description[0] = '\0';
             active_field = 0;
@@ -155,7 +160,8 @@ void ui_draw(const AppState *app)
         while (*visible && MeasureText(visible, 18) > 358) ++visible;
         clipped_text(visible, 42, (int)fields[i].y + 10, 358);
     }
-    box(create_button, "Create ticket  [Enter]", false);
+    box(create_button, "Create ticket", false);
+    box(clear_button, "Clear form", false);
     DrawText("Tab: next field. English text input.", 32, 402, 17, GRAY);
     DrawText("Scroll over the list to view more tickets.", 448, 97, 16, GRAY);
     if (!app->count) DrawText("No tickets yet. Create your first ticket.", 448, 140, 18, GRAY);

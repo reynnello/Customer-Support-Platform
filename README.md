@@ -45,7 +45,8 @@ in your personal branch, then open a pull request into main.
 ## Try the implemented features
 
 Enter a customer, subject and description, then click Create ticket or press
-Enter. Use Tab to move between fields. Select a ticket in the list and click
+Enter. Use Clear form to discard text from the three input fields without
+changing existing tickets. Use Tab to move between fields. Select a ticket in the list and click
 Open, In progress or Resolved to change its status. Scroll over the list to
 see more tickets. The initial form supports printable English ASCII input.
 The selected ticket card shows ID, customer, subject, description, status,
