@@ -1,9 +1,9 @@
 # Customer Support Platform
 
-Minimal shared foundation for Anton Opria and Dzheffrei Ihesonulo.
-**C11 + Raylib 5.5, Linux.** Anton's branch implements ticket creation and
-status changes, with a form and selectable ticket list. Search, priority and
-assignee editing, and persistence are not implemented.
+Coursework prototype by Anton Opria and Dzheffrei Ihesonulo.
+**C11 + Raylib 5.5, Linux.** The application supports ticket creation,
+search and filters, status and priority changes, assignment, and local file
+storage.
 
 Read `src/app.h` and `AGENTS.md`
 before asking an AI to implement a feature. The common function names and data
@@ -45,20 +45,39 @@ in your personal branch, then open a pull request into main.
 ## Try the implemented features
 
 Enter a customer, subject and description, then click Create ticket or press
-Enter. Use Clear form to discard text from the three input fields without
-changing existing tickets. Use Tab to move between fields. Select a ticket in the list and click
-Open, In progress or Resolved to change its status. Scroll over the list to
-see more tickets. The initial form supports printable English ASCII input.
+Enter while the creation form is active. Use Clear form to discard those three
+input fields without changing existing tickets. Use Tab to move between fields.
+The search field matches customer and subject text. Use the Status and Priority
+filter buttons to cycle through values, or Reset to show all tickets. Scroll
+over the list to see more results. Selection stays on the same ticket ID when a
+filter hides it. The form supports printable English ASCII input.
+
+Select a ticket in the list, then click Open, In progress or Resolved to change
+its status. The Low, Medium and High buttons change its priority. Enter a name
+in Assigned to and click Assign (or press Enter in that field); leave it empty
+and assign to remove the current name.
 The selected ticket card shows ID, customer, subject, description, status,
 priority and assignee (Unassigned if empty). Long text wraps; scroll inside
-the card to read all details. Changing selection resets the card scroll. Tickets exist only for the
-current session and are lost when the program closes.
+the card to read all details. Changing selection resets the card scroll.
 
-## Test creation and status changes
+Click Save or press Ctrl+S to write `tickets.txt` in the directory from which
+the program was launched. Unsaved changes are also saved on exit. On startup,
+an existing file is loaded automatically. If it is invalid, the error is
+displayed and the in-memory tickets remain unchanged. Automatic saving is
+disabled for that run to avoid overwriting the invalid file; an explicit save
+still works. The file format is described in `docs/FILE_FORMAT.md`.
+
+## Run tests
 
 ```sh
 cc -std=c11 -Wall -Wextra -Wpedantic -Isrc tests/test_ticket_create.c src/app.c src/ticket_create.c -o build/test_ticket_create
 ./build/test_ticket_create
+cc -std=c11 -Wall -Wextra -Wpedantic -Isrc tests/test_ticket_query.c src/app.c src/ticket_query.c -o build/test_ticket_query
+./build/test_ticket_query
+cc -std=c11 -Wall -Wextra -Wpedantic -Isrc tests/test_ticket_edit.c src/app.c src/ticket_edit.c -o build/test_ticket_edit
+./build/test_ticket_edit
+cc -std=c11 -Wall -Wextra -Wpedantic -Isrc tests/test_storage.c src/app.c src/storage.c -o build/test_storage
+./build/test_storage
 ```
 
 The ticket summary displays Total tickets, Open, In progress and Resolved.
